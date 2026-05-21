@@ -2,31 +2,103 @@
 <html>
 
 <head>
-  <title>AR7 Device Tracker</title>
 
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AR7 Tracker</title>
 
-  <link rel="stylesheet"
-    href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0">
 
-  <style>
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
-    body {
-      margin: 0;
-      font-family: Arial;
-      background: #111;
-      color: white;
-    }
+<style>
 
-    #map {
-      width: 100%;
-      height: 100vh;
-    }
+body{
+margin:0;
+font-family:Arial;
+background:#111;
+color:white;
+overflow:hidden;
+}
 
-  </style>
+#map{
+position:absolute;
+top:0;
+left:300px;
+right:0;
+bottom:0;
+}
+
+#sidebar{
+position:absolute;
+top:0;
+left:0;
+width:300px;
+height:100%;
+background:#1b1b1b;
+padding:15px;
+overflow:auto;
+box-sizing:border-box;
+border-right:1px solid #333;
+}
+
+.device{
+background:#222;
+padding:10px;
+margin-top:10px;
+border-radius:10px;
+}
+
+button{
+background:#444;
+color:white;
+border:none;
+padding:10px;
+border-radius:8px;
+cursor:pointer;
+margin-top:10px;
+width:100%;
+}
+
+h2{
+margin-top:0;
+}
+
+#login{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+text-align:center;
+}
+
+</style>
+
 </head>
 
 <body>
+
+<div id="login">
+
+<h1>AR7 Device Tracker</h1>
+
+<button id="googleLogin">
+Sign In With Google
+</button>
+
+</div>
+
+<div id="sidebar" style="display:none;">
+
+<h2>Your Devices</h2>
+
+<div id="deviceList"></div>
+
+<button id="logoutBtn">
+Logout
+</button>
+
+</div>
 
 <div id="map"></div>
 
@@ -38,31 +110,40 @@ import { initializeApp }
 from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
 
 import {
-  getDatabase,
-  ref,
-  set,
-  onValue
+getDatabase,
+ref,
+set,
+onValue
 }
 from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
+import {
+getAuth,
+GoogleAuthProvider,
+signInWithPopup,
+onAuthStateChanged,
+signOut
+}
+from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+
 const firebaseConfig = {
 
-  apiKey: "AIzaSyA9019b2kvsZFJTjzvdGMIWxHWC5UreHr4",
+apiKey:"AIzaSyA9019b2kvsZFJTjzvdGMIWxHWC5UreHr4",
 
-  authDomain: "device-tracker-ar7.firebaseapp.com",
+authDomain:"device-tracker-ar7.firebaseapp.com",
 
-  databaseURL:
-  "https://device-tracker-ar7-default-rtdb.asia-southeast1.firebasedatabase.app",
+databaseURL:
+"https://device-tracker-ar7-default-rtdb.asia-southeast1.firebasedatabase.app",
 
-  projectId: "device-tracker-ar7",
+projectId:"device-tracker-ar7",
 
-  storageBucket:
-  "device-tracker-ar7.firebasestorage.app",
+storageBucket:
+"device-tracker-ar7.firebasestorage.app",
 
-  messagingSenderId: "1027897374944",
+messagingSenderId:"1027897374944",
 
-  appId:
-  "1:1027897374944:web:64826f4587e10ec99a7885"
+appId:
+"1:1027897374944:web:64826f4587e10ec99a7885"
 
 };
 
@@ -70,82 +151,163 @@ const app = initializeApp(firebaseConfig);
 
 const db = getDatabase(app);
 
-const map = L.map('map').setView([20, 78], 4);
+const auth = getAuth(app);
+
+const provider = new GoogleAuthProvider();
+
+const map = L.map('map').setView([20,78],4);
 
 L.tileLayer(
-  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-  {
-    attribution: '© OpenStreetMap'
-  }
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+attribution:'© OpenStreetMap'
+}
 ).addTo(map);
 
 const markers = {};
 
-const deviceId =
-  localStorage.getItem("deviceId")
-  ||
-  Math.random().toString(36).substring(2);
+document
+.getElementById("googleLogin")
+.onclick = async ()=>{
 
-localStorage.setItem("deviceId", deviceId);
+await signInWithPopup(auth,provider);
+
+};
+
+document
+.getElementById("logoutBtn")
+.onclick = ()=>{
+
+signOut(auth);
+
+};
+
+onAuthStateChanged(auth,(user)=>{
+
+if(!user){
+
+document.getElementById("login")
+.style.display="block";
+
+document.getElementById("sidebar")
+.style.display="none";
+
+return;
+
+}
+
+document.getElementById("login")
+.style.display="none";
+
+document.getElementById("sidebar")
+.style.display="block";
+
+const uid = user.uid;
+
+const deviceId =
+localStorage.getItem("deviceId")
+||
+Math.random().toString(36).substring(2);
+
+localStorage.setItem("deviceId",deviceId);
 
 navigator.geolocation.watchPosition(
 
-(position) => {
+(position)=>{
 
-  const lat = position.coords.latitude;
-  const lng = position.coords.longitude;
+const lat = position.coords.latitude;
+const lng = position.coords.longitude;
 
-  set(ref(db, 'devices/' + deviceId), {
+const deviceData = {
 
-    lat: lat,
-    lng: lng,
-    updated: Date.now()
+name:navigator.platform,
 
-  });
+lat:lat,
+lng:lng,
+
+battery:"Unknown",
+
+updated:Date.now()
+
+};
+
+set(
+ref(db,
+'users/'+uid+'/devices/'+deviceId),
+deviceData
+);
 
 },
 
-(error) => {
+(error)=>{
 
-  alert("Location permission denied");
+alert("Location permission denied");
 
 },
 
 {
-  enableHighAccuracy: true
+enableHighAccuracy:true
 }
 
 );
 
-onValue(ref(db, 'devices'), (snapshot) => {
+onValue(
+ref(db,'users/'+uid+'/devices'),
+(snapshot)=>{
 
-  const data = snapshot.val();
+const data = snapshot.val();
 
-  if (!data) return;
+if(!data)return;
 
-  Object.keys(data).forEach((id) => {
+document
+.getElementById("deviceList")
+.innerHTML="";
 
-    const device = data[id];
+Object.keys(data).forEach((id)=>{
 
-    if (markers[id]) {
+const d = data[id];
 
-      markers[id].setLatLng([
-        device.lat,
-        device.lng
-      ]);
+document
+.getElementById("deviceList")
+.innerHTML += `
 
-    } else {
+<div class="device">
 
-      markers[id] = L.marker([
-        device.lat,
-        device.lng
-      ])
-      .addTo(map)
-      .bindPopup("Device: " + id);
+<b>${d.name}</b>
 
-    }
+<br><br>
 
-  });
+Latitude:
+${d.lat.toFixed(5)}
+
+<br>
+
+Longitude:
+${d.lng.toFixed(5)}
+
+</div>
+
+`;
+
+if(markers[id]){
+
+markers[id]
+.setLatLng([d.lat,d.lng]);
+
+}else{
+
+markers[id]=L.marker([
+d.lat,
+d.lng
+])
+.addTo(map)
+.bindPopup(d.name);
+
+}
+
+});
+
+});
 
 });
 
