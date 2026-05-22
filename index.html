@@ -8,6 +8,8 @@
 <meta name="viewport"
 content="width=device-width, initial-scale=1.0">
 
+<link rel="manifest" href="manifest.json">
+
 <link rel="stylesheet"
 href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -105,7 +107,17 @@ font-size:22px;
 border-radius:12px;
 }
 
-@media (max-width: 768px){
+.statusOnline{
+color:#00ff88;
+font-weight:bold;
+}
+
+.statusOffline{
+color:#ff4444;
+font-weight:bold;
+}
+
+@media (max-width:768px){
 
 #map{
 left:0;
@@ -314,7 +326,7 @@ async(position)=>{
 const lat = position.coords.latitude;
 const lng = position.coords.longitude;
 
-map.setView([lat,lng],18);
+map.flyTo([lat,lng],18);
 
 let batteryLevel = "Unknown";
 
@@ -338,7 +350,9 @@ lng:lng,
 
 battery:batteryLevel,
 
-updated:new Date().toLocaleTimeString()
+updated:Date.now(),
+
+online:true
 
 };
 
@@ -386,13 +400,16 @@ Object.keys(data).forEach((id)=>{
 
 const d = data[id];
 
+const online =
+Date.now()-d.updated < 10000;
+
 document
 .getElementById("deviceList")
 .innerHTML += `
 
 <div class="device">
 
-<b style="font-size:18px;">
+<b style="font-size:20px;">
 ${d.name}
 </b>
 
@@ -408,8 +425,22 @@ ${d.battery}
 
 <br><br>
 
-Updated:
-${d.updated}
+Status:
+<span class="${
+online
+?
+'statusOnline'
+:
+'statusOffline'
+}">
+${
+online
+?
+'🟢 Online'
+:
+'🔴 Offline'
+}
+</span>
 
 <br><br>
 
@@ -432,10 +463,12 @@ markers[id]
 
 }else{
 
-markers[id]=L.marker([
-d.lat,
-d.lng
-])
+markers[id]=L.marker(
+[d.lat,d.lng],
+{
+title:d.name
+}
+)
 .addTo(map)
 .bindPopup(d.name);
 
