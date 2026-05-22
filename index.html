@@ -40,6 +40,7 @@ padding:15px;
 overflow:auto;
 box-sizing:border-box;
 border-right:1px solid #333;
+z-index:1000;
 }
 
 .device{
@@ -53,11 +54,12 @@ button{
 background:#444;
 color:white;
 border:none;
-padding:10px;
+padding:12px;
 border-radius:8px;
 cursor:pointer;
 margin-top:10px;
 width:100%;
+font-size:16px;
 }
 
 h2{
@@ -70,6 +72,10 @@ top:50%;
 left:50%;
 transform:translate(-50%,-50%);
 text-align:center;
+z-index:2000;
+background:#1b1b1b;
+padding:30px;
+border-radius:15px;
 }
 
 </style>
@@ -170,7 +176,16 @@ document
 .getElementById("googleLogin")
 .onclick = async ()=>{
 
+try{
+
 await signInWithPopup(auth,provider);
+
+}catch(err){
+
+alert(err.message);
+console.log(err);
+
+}
 
 };
 
@@ -211,12 +226,19 @@ Math.random().toString(36).substring(2);
 
 localStorage.setItem("deviceId",deviceId);
 
-navigator.geolocation.watchPosition(
+navigator.geolocation.getCurrentPosition(
 
 (position)=>{
 
 const lat = position.coords.latitude;
 const lng = position.coords.longitude;
+
+map.setView([lat,lng],15);
+
+const marker = L.marker([lat,lng])
+.addTo(map)
+.bindPopup("Your Device")
+.openPopup();
 
 const deviceData = {
 
@@ -241,7 +263,8 @@ deviceData
 
 (error)=>{
 
-alert("Location permission denied");
+alert("Please allow location access");
+console.log(error);
 
 },
 
