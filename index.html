@@ -32,7 +32,7 @@ overflow:hidden;
 #map{
 position:absolute;
 top:0;
-left:330px;
+left:340px;
 right:0;
 bottom:0;
 z-index:1;
@@ -42,7 +42,7 @@ z-index:1;
 position:absolute;
 top:0;
 left:0;
-width:330px;
+width:340px;
 height:100%;
 background:#151515;
 overflow:auto;
@@ -61,21 +61,9 @@ margin-bottom:20px;
 .device{
 background:#202020;
 padding:15px;
-margin-top:12px;
-border-radius:16px;
+margin-top:15px;
+border-radius:18px;
 box-shadow:0 0 15px rgba(0,0,0,0.4);
-animation:fade 0.3s;
-}
-
-@keyframes fade{
-from{
-opacity:0;
-transform:translateY(10px);
-}
-to{
-opacity:1;
-transform:translateY(0);
-}
 }
 
 button{
@@ -139,8 +127,15 @@ border-radius:15px;
 
 .info{
 margin-top:8px;
-color:#ccc;
+color:#d0d0d0;
 font-size:14px;
+line-height:1.5;
+word-break:break-word;
+}
+
+a{
+color:#66b3ff;
+text-decoration:none;
 }
 
 @media (max-width:768px){
@@ -151,7 +146,7 @@ left:0;
 
 #sidebar{
 transform:translateX(-100%);
-width:290px;
+width:300px;
 }
 
 #sidebar.show{
@@ -308,6 +303,30 @@ signOut(auth);
 
 };
 
+window.renameDevice = (id,currentName)=>{
+
+const newName =
+prompt("Enter new device name",currentName);
+
+if(!newName)return;
+
+localStorage.setItem(
+"deviceName",
+newName
+);
+
+location.reload();
+
+};
+
+window.playAlarm = ()=>{
+
+document
+.getElementById("alarmSound")
+.play();
+
+};
+
 onAuthStateChanged(auth,(user)=>{
 
 if(!user){
@@ -360,6 +379,18 @@ deviceName
 
 }
 
+function getDeviceType(){
+
+const ua = navigator.userAgent;
+
+if(/mobile/i.test(ua)) return "Phone";
+
+if(/tablet/i.test(ua)) return "Tablet";
+
+return "Laptop/Desktop";
+
+}
+
 navigator.geolocation.watchPosition(
 
 async(position)=>{
@@ -386,14 +417,20 @@ name:deviceName,
 
 platform:navigator.platform,
 
+deviceType:getDeviceType(),
+
+manufacturer:
+navigator.vendor || "Unknown",
+
+browser:
+navigator.userAgent,
+
 lat:lat,
 lng:lng,
 
 battery:batteryLevel,
 
-updated:Date.now(),
-
-alarm:false
+updated:Date.now()
 
 };
 
@@ -463,6 +500,10 @@ const d = data[id];
 const online =
 Date.now()-d.updated < 15000;
 
+const lastSeen =
+new Date(d.updated)
+.toLocaleString();
+
 document
 .getElementById("deviceList")
 .innerHTML += `
@@ -470,7 +511,7 @@ document
 <div class="device">
 
 <div style="
-font-size:20px;
+font-size:22px;
 font-weight:bold;
 ">
 
@@ -480,13 +521,50 @@ font-weight:bold;
 
 <div class="info">
 
-💻 ${d.platform}
+🖥️ Type:
+${d.deviceType}
 
 </div>
 
 <div class="info">
 
-🔋 ${d.battery}
+🏢 Company:
+${d.manufacturer}
+
+</div>
+
+<div class="info">
+
+💻 Platform:
+${d.platform}
+
+</div>
+
+<div class="info">
+
+🔋 Battery:
+${d.battery}
+
+</div>
+
+<div class="info">
+
+📍 Coordinates:
+
+<br>
+
+${d.lat.toFixed(5)},
+${d.lng.toFixed(5)}
+
+</div>
+
+<div class="info">
+
+🕒 Last Online:
+
+<br>
+
+${lastSeen}
 
 </div>
 
@@ -501,6 +579,26 @@ online
 }
 
 </div>
+
+<div class="info">
+
+<a target="_blank"
+href="https://maps.google.com/?q=${d.lat},${d.lng}">
+
+Open In Google Maps
+
+</a>
+
+</div>
+
+<button onclick="renameDevice(
+'${id}',
+'${d.name}'
+)">
+
+✏️ Rename Device
+
+</button>
 
 <button onclick="playAlarm()">
 
@@ -533,18 +631,6 @@ L.marker([d.lat,d.lng])
 );
 
 });
-
-window.playAlarm = ()=>{
-
-document
-.getElementById("alarmSound")
-.play();
-
-alert(
-"Alarm triggered on this device"
-);
-
-};
 
 if("serviceWorker" in navigator){
 
