@@ -29,7 +29,6 @@ top:0;
 left:320px;
 right:0;
 bottom:0;
-z-index:1;
 }
 
 #sidebar{
@@ -52,7 +51,6 @@ background:#222;
 padding:15px;
 margin-top:12px;
 border-radius:12px;
-box-shadow:0 0 10px rgba(0,0,0,0.4);
 }
 
 button{
@@ -65,15 +63,6 @@ cursor:pointer;
 margin-top:10px;
 width:100%;
 font-size:16px;
-transition:0.2s;
-}
-
-button:hover{
-background:#444;
-}
-
-h2{
-margin-top:0;
 }
 
 #login{
@@ -86,12 +75,6 @@ z-index:2000;
 background:#1b1b1b;
 padding:35px;
 border-radius:18px;
-box-shadow:0 0 20px rgba(0,0,0,0.5);
-}
-
-#title{
-font-size:32px;
-margin-bottom:20px;
 }
 
 #menuBtn{
@@ -107,14 +90,12 @@ font-size:22px;
 border-radius:12px;
 }
 
-.statusOnline{
+.online{
 color:#00ff88;
-font-weight:bold;
 }
 
-.statusOffline{
+.offline{
 color:#ff4444;
-font-weight:bold;
 }
 
 @media (max-width:768px){
@@ -150,9 +131,7 @@ display:block;
 
 <div id="login">
 
-<div id="title">
-AR7 Device Tracker
-</div>
+<h1>AR7 Device Tracker</h1>
 
 <button id="googleLogin">
 Sign In With Google
@@ -238,6 +217,8 @@ attribution:'© OpenStreetMap'
 
 const markers = {};
 
+let firstLocation = true;
+
 document
 .getElementById("menuBtn")
 .onclick = ()=>{
@@ -252,15 +233,7 @@ document
 .getElementById("googleLogin")
 .onclick = async ()=>{
 
-try{
-
 await signInWithPopup(auth,provider);
-
-}catch(err){
-
-alert(err.message);
-
-}
 
 };
 
@@ -295,11 +268,7 @@ document.getElementById("sidebar")
 const uid = user.uid;
 
 const deviceId =
-localStorage.getItem("deviceId")
-||
-Math.random().toString(36).substring(2);
-
-localStorage.setItem("deviceId",deviceId);
+crypto.randomUUID();
 
 let deviceName =
 localStorage.getItem("deviceName");
@@ -323,7 +292,13 @@ async(position)=>{
 const lat = position.coords.latitude;
 const lng = position.coords.longitude;
 
-map.flyTo([lat,lng],18);
+if(firstLocation){
+
+map.setView([lat,lng],18);
+
+firstLocation=false;
+
+}
 
 let batteryLevel = "Unknown";
 
@@ -336,7 +311,12 @@ Math.round(battery.level*100)+"%";
 
 }
 
-const deviceData = {
+await set(
+ref(
+db,
+'users/'+uid+'/devices/'+deviceId
+),
+{
 
 name:deviceName,
 
@@ -349,14 +329,8 @@ battery:batteryLevel,
 
 updated:Date.now()
 
-};
+}
 
-set(
-ref(
-db,
-'users/'+uid+'/devices/'+deviceId
-),
-deviceData
 );
 
 },
@@ -370,7 +344,7 @@ console.log(error);
 {
 enableHighAccuracy:true,
 maximumAge:0,
-timeout:5000
+timeout:10000
 }
 
 );
@@ -381,13 +355,11 @@ ref(db,'users/'+uid+'/devices'),
 
 const data = snapshot.val();
 
-if(!data)return;
-
 document
 .getElementById("deviceList")
 .innerHTML="";
 
-Object.keys(data).forEach((id)=>{
+for(const id in data){
 
 const d = data[id];
 
@@ -400,14 +372,7 @@ document
 
 <div class="device">
 
-<b style="font-size:20px;">
-${d.name}
-</b>
-
-<br><br>
-
-Platform:
-${d.platform}
+<b>${d.name}</b>
 
 <br><br>
 
@@ -420,9 +385,9 @@ Status:
 <span class="${
 online
 ?
-'statusOnline'
+'online'
 :
-'statusOffline'
+'offline'
 }">
 ${
 online
@@ -432,16 +397,6 @@ online
 '🔴 Offline'
 }
 </span>
-
-<br><br>
-
-Latitude:
-${d.lat.toFixed(5)}
-
-<br>
-
-Longitude:
-${d.lng.toFixed(5)}
 
 </div>
 
@@ -454,18 +409,14 @@ markers[id]
 
 }else{
 
-markers[id]=L.marker(
-[d.lat,d.lng],
-{
-title:d.name
-}
-)
+markers[id] =
+L.marker([d.lat,d.lng])
 .addTo(map)
 .bindPopup(d.name);
 
 }
 
-});
+}
 
 });
 
