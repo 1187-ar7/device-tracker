@@ -216,7 +216,8 @@ import {
 getDatabase,
 ref,
 set,
-onValue
+onValue,
+update
 }
 from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
@@ -303,10 +304,13 @@ signOut(auth);
 
 };
 
-window.renameDevice = (id,currentName)=>{
+window.renameDevice = (currentName)=>{
 
 const newName =
-prompt("Enter new device name",currentName);
+prompt(
+"Enter new device name",
+currentName
+);
 
 if(!newName)return;
 
@@ -319,11 +323,24 @@ location.reload();
 
 };
 
-window.playAlarm = ()=>{
+window.findDevice = async(deviceId)=>{
 
-document
-.getElementById("alarmSound")
-.play();
+const user = auth.currentUser;
+
+if(!user)return;
+
+await update(
+
+ref(
+db,
+'users/'+user.uid+'/devices/'+deviceId
+),
+
+{
+alarm:true
+}
+
+);
 
 };
 
@@ -391,6 +408,53 @@ return "Laptop/Desktop";
 
 }
 
+onValue(
+
+ref(
+db,
+'users/'+uid+'/devices/'+deviceId+'/alarm'
+),
+
+async(snapshot)=>{
+
+const alarm = snapshot.val();
+
+if(alarm===true){
+
+const sound =
+document.getElementById("alarmSound");
+
+sound.loop = true;
+
+await sound.play();
+
+setTimeout(async()=>{
+
+sound.pause();
+
+sound.currentTime = 0;
+
+await update(
+
+ref(
+db,
+'users/'+uid+'/devices/'+deviceId
+),
+
+{
+alarm:false
+}
+
+);
+
+},10000);
+
+}
+
+}
+
+);
+
 navigator.geolocation.watchPosition(
 
 async(position)=>{
@@ -430,7 +494,9 @@ lng:lng,
 
 battery:batteryLevel,
 
-updated:Date.now()
+updated:Date.now(),
+
+alarm:false
 
 };
 
@@ -592,7 +658,6 @@ Open In Google Maps
 </div>
 
 <button onclick="renameDevice(
-'${id}',
 '${d.name}'
 )">
 
@@ -600,7 +665,9 @@ Open In Google Maps
 
 </button>
 
-<button onclick="playAlarm()">
+<button onclick="findDevice(
+'${id}'
+)">
 
 🔔 Find Device
 
