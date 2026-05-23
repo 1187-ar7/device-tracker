@@ -30,6 +30,11 @@ color:white;
 overflow:hidden;
 }
 
+body.locked{
+overflow:hidden !important;
+touch-action:none !important;
+}
+
 #map{
 position:absolute;
 top:0;
@@ -138,15 +143,21 @@ display:none;
 position:fixed;
 top:0;
 left:0;
-width:100%;
-height:100%;
+width:100vw;
+height:100vh;
 background:black;
-z-index:999999;
+z-index:999999999;
 justify-content:center;
 align-items:center;
 flex-direction:column;
 padding:20px;
+pointer-events:all;
 touch-action:none;
+overflow:hidden;
+}
+
+#lockScreen *{
+pointer-events:auto;
 }
 
 #unlockBox{
@@ -242,7 +253,7 @@ Logout
 🔒 DEVICE LOCKED
 </h1>
 
-<p id="lostMessage">
+<p>
 This device is lost
 </p>
 
@@ -337,6 +348,34 @@ document.getElementById("alarmSound");
 
 let locallyLocked = false;
 
+document.addEventListener(
+"touchmove",
+(e)=>{
+
+if(locallyLocked){
+
+e.preventDefault();
+
+}
+
+},
+{ passive:false }
+);
+
+document.addEventListener(
+"touchstart",
+(e)=>{
+
+if(locallyLocked){
+
+e.stopPropagation();
+
+}
+
+},
+true
+);
+
 document
 .getElementById("menuBtn")
 .onclick = ()=>{
@@ -390,16 +429,10 @@ window.findDevice = async(id)=>{
 const user = auth.currentUser;
 
 await update(
-
-ref(
-db,
-'users/'+user.uid+'/devices/'+id
-),
-
+ref(db,'users/'+user.uid+'/devices/'+id),
 {
 alarm:true
 }
-
 );
 
 };
@@ -409,17 +442,11 @@ window.lockDevice = async(id)=>{
 const user = auth.currentUser;
 
 await update(
-
-ref(
-db,
-'users/'+user.uid+'/devices/'+id
-),
-
+ref(db,'users/'+user.uid+'/devices/'+id),
 {
 locked:true,
 alarm:true
 }
-
 );
 
 };
@@ -429,17 +456,11 @@ window.unlockDeviceRemote = async(id)=>{
 const user = auth.currentUser;
 
 await update(
-
-ref(
-db,
-'users/'+user.uid+'/devices/'+id
-),
-
+ref(db,'users/'+user.uid+'/devices/'+id),
 {
 locked:false,
 alarm:false
 }
-
 );
 
 };
@@ -457,16 +478,10 @@ currentName
 if(!newName)return;
 
 await update(
-
-ref(
-db,
-'users/'+user.uid+'/devices/'+id
-),
-
+ref(db,'users/'+user.uid+'/devices/'+id),
 {
 name:newName
 }
-
 );
 
 if(id===localStorage.getItem("deviceId")){
@@ -557,12 +572,10 @@ document
 .value;
 
 const snap = await get(
-
 ref(
 db,
 'users/'+uid+'/devices/'+deviceId
 )
-
 );
 
 const data = snap.val();
@@ -572,22 +585,21 @@ if(pin===data.lockPin){
 locallyLocked = false;
 
 await update(
-
 ref(
 db,
 'users/'+uid+'/devices/'+deviceId
 ),
-
 {
 locked:false,
 alarm:false
 }
-
 );
 
 document
 .getElementById("lockScreen")
 .style.display="none";
+
+document.body.classList.remove("locked");
 
 sound.pause();
 
@@ -610,7 +622,6 @@ document
 };
 
 onValue(
-
 ref(
 db,
 'users/'+uid+'/devices/'+deviceId
@@ -630,7 +641,7 @@ document
 .getElementById("lockScreen")
 .style.display="flex";
 
-document.body.style.overflow="hidden";
+document.body.classList.add("locked");
 
 try{
 
@@ -650,6 +661,8 @@ document
 .getElementById("lockScreen")
 .style.display="none";
 
+document.body.classList.remove("locked");
+
 sound.pause();
 
 sound.currentTime = 0;
@@ -657,11 +670,9 @@ sound.currentTime = 0;
 }
 
 }
-
 );
 
 onValue(
-
 ref(
 db,
 'users/'+uid+'/devices/'+deviceId+'/alarm'
@@ -686,16 +697,13 @@ sound.pause();
 sound.currentTime = 0;
 
 await update(
-
 ref(
 db,
 'users/'+uid+'/devices/'+deviceId
 ),
-
 {
 alarm:false
 }
-
 );
 
 },10000);
@@ -703,7 +711,6 @@ alarm:false
 }
 
 }
-
 );
 
 function getDeviceType(){
@@ -742,12 +749,10 @@ battery.level*100
 }
 
 const oldSnap = await get(
-
 ref(
 db,
 'users/'+uid+'/devices/'+deviceId
 )
-
 );
 
 const oldData =
@@ -781,14 +786,11 @@ lockPin:devicePin
 };
 
 await set(
-
 ref(
 db,
 'users/'+uid+'/devices/'+deviceId
 ),
-
 deviceData
-
 );
 
 if(markers[deviceId]){
@@ -824,7 +826,6 @@ timeout:10000
 );
 
 onValue(
-
 ref(
 db,
 'users/'+uid+'/devices'
