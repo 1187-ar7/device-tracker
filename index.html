@@ -187,6 +187,12 @@ Sign In With Google
 AR7 Tracker
 </div>
 
+<button id="enableSoundBtn">
+
+🔊 Enable Sound
+
+</button>
+
 <div id="deviceList"></div>
 
 <button id="logoutBtn">
@@ -197,7 +203,7 @@ Logout
 
 <div id="map"></div>
 
-<audio id="alarmSound">
+<audio id="alarmSound" autoplay>
 
 <source
 src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
@@ -269,6 +275,31 @@ attribution:'© OpenStreetMap'
 ).addTo(map);
 
 const markers = {};
+
+const sound =
+document.getElementById("alarmSound");
+
+document
+.getElementById("enableSoundBtn")
+.onclick = async()=>{
+
+try{
+
+await sound.play();
+
+sound.pause();
+
+sound.currentTime = 0;
+
+alert("Sound enabled successfully");
+
+}catch(err){
+
+alert("Click again to enable sound");
+
+}
+
+};
 
 document
 .getElementById("menuBtn")
@@ -421,12 +452,19 @@ const alarm = snapshot.val();
 
 if(alarm===true){
 
-const sound =
-document.getElementById("alarmSound");
+try{
 
 sound.loop = true;
 
 await sound.play();
+
+}catch(err){
+
+alert("REMOTE FIND REQUEST");
+
+console.log(err);
+
+}
 
 setTimeout(async()=>{
 
