@@ -236,6 +236,10 @@ AR7 Tracker
 🔊 Enable Sound
 </button>
 
+<button id="antiTheftBtn">
+🛡️ Anti-Theft OFF
+</button>
+
 <div id="deviceList"></div>
 
 <button id="logoutBtn">
@@ -354,6 +358,12 @@ document.getElementById("alarmSound");
 
 let locallyLocked = false;
 
+let antiTheftEnabled = false;
+
+let lastX = null;
+let lastY = null;
+let lastZ = null;
+
 document.addEventListener(
 "touchmove",
 (e)=>{
@@ -424,6 +434,37 @@ alert("Sound enabled");
 alert("Tap again");
 
 }
+
+};
+
+document
+.getElementById("antiTheftBtn")
+.onclick = async()=>{
+
+if(
+typeof DeviceMotionEvent !==
+"undefined"
+&&
+typeof DeviceMotionEvent
+.requestPermission === "function"
+){
+
+await DeviceMotionEvent
+.requestPermission();
+
+}
+
+antiTheftEnabled =
+!antiTheftEnabled;
+
+document
+.getElementById("antiTheftBtn")
+.innerText =
+antiTheftEnabled
+?
+"🛡️ Anti-Theft ON"
+:
+"🛡️ Anti-Theft OFF";
 
 };
 
@@ -1007,6 +1048,69 @@ L.marker([d.lat,d.lng])
 });
 
 });
+
+window.addEventListener(
+"devicemotion",
+async(event)=>{
+
+if(!antiTheftEnabled)return;
+
+const x =
+event.accelerationIncludingGravity.x;
+
+const y =
+event.accelerationIncludingGravity.y;
+
+const z =
+event.accelerationIncludingGravity.z;
+
+if(
+lastX!==null
+&&
+lastY!==null
+&&
+lastZ!==null
+){
+
+const diff =
+Math.abs(x-lastX)
++
+Math.abs(y-lastY)
++
+Math.abs(z-lastZ);
+
+if(diff > 15){
+
+try{
+
+sound.loop = true;
+
+await sound.play();
+
+new Notification(
+"⚠️ Theft Alert",
+{
+body:
+"Device movement detected"
+}
+);
+
+}catch(err){
+
+console.log(err);
+
+}
+
+}
+
+}
+
+lastX = x;
+lastY = y;
+lastZ = z;
+
+}
+);
 
 onMessage(messaging,(payload)=>{
 
