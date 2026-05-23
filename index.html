@@ -255,6 +255,10 @@ This device is lost
 id="unlockPin"
 type="password"
 placeholder="Enter PIN"
+autocomplete="off"
+autocorrect="off"
+autocapitalize="off"
+spellcheck="false"
 >
 
 <button id="unlockBtn">
@@ -591,6 +595,23 @@ deviceName
 
 }
 
+let devicePin =
+localStorage.getItem("devicePin");
+
+if(!devicePin){
+
+devicePin =
+prompt(
+"Create 4 digit PIN for this device"
+);
+
+localStorage.setItem(
+"devicePin",
+devicePin
+);
+
+}
+
 function getDeviceType(){
 
 const ua = navigator.userAgent;
@@ -754,7 +775,7 @@ alarm:false,
 
 locked:false,
 
-lockPin:"1234",
+lockPin:devicePin,
 
 lostMessage:"This device is lost"
 
