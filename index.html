@@ -265,10 +265,6 @@ placeholder="Enter PIN"
 autocomplete="off"
 >
 
-<button id="unlockBtn">
-Unlock Device
-</button>
-
 </div>
 
 </div>
@@ -307,6 +303,13 @@ signOut
 }
 from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 
+import {
+getMessaging,
+getToken,
+onMessage
+}
+from "https://www.gstatic.com/firebasejs/12.13.0/firebase-messaging.js";
+
 const firebaseConfig = {
 
 apiKey:"AIzaSyA9019b2kvsZFJTjzvdGMIWxHWC5UreHr4",
@@ -335,6 +338,8 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
+
+const messaging = getMessaging(app);
 
 const map = L.map('map').setView([20,78],4);
 
@@ -544,6 +549,31 @@ document.getElementById("sidebar")
 
 const uid = user.uid;
 
+try{
+
+const permission =
+await Notification.requestPermission();
+
+if(permission==="granted"){
+
+const token = await getToken(
+messaging,
+{
+vapidKey:
+"BJBv9huLgF2O6V8BiQ6av_X6DRr9xPc8Ngq0wPz89RpwXL-wOBVMZyjT7n3pRgasThgzK4pB1_k5JQKfMJhjYPU"
+}
+);
+
+console.log("FCM TOKEN:",token);
+
+}
+
+}catch(err){
+
+console.log(err);
+
+}
+
 let deviceId =
 localStorage.getItem("deviceId");
 
@@ -590,8 +620,12 @@ devicePin
 }
 
 document
-.getElementById("unlockBtn")
-.onclick = async()=>{
+.getElementById("unlockPin")
+.addEventListener(
+"keydown",
+async(e)=>{
+
+if(e.key==="Enter"){
 
 const pin =
 document
@@ -646,7 +680,10 @@ document
 
 }
 
-};
+}
+
+}
+);
 
 onValue(
 ref(
@@ -941,6 +978,12 @@ online
 🔒 Lock Device
 </button>
 
+<button onclick="unlockDeviceRemote(
+'${id}'
+)">
+🔓 Unlock Device
+</button>
+
 </div>
 
 `;
@@ -965,9 +1008,25 @@ L.marker([d.lat,d.lng])
 
 });
 
+onMessage(messaging,(payload)=>{
+
+new Notification(
+payload.notification.title,
+{
+body:payload.notification.body,
+icon:"icon-192.png"
+}
+);
+
+});
+
 if("serviceWorker" in navigator){
 
 navigator.serviceWorker.register("sw.js");
+
+navigator.serviceWorker.register(
+"firebase-messaging-sw.js"
+);
 
 }
 
