@@ -82,6 +82,7 @@ cursor:pointer;
 margin-top:10px;
 width:100%;
 font-size:15px;
+transition:0.2s;
 }
 
 button:hover{
@@ -352,7 +353,13 @@ document.addEventListener(
 "touchmove",
 (e)=>{
 
-if(locallyLocked){
+if(
+locallyLocked
+&&
+!document
+.getElementById("unlockBox")
+.contains(e.target)
+){
 
 e.preventDefault();
 
@@ -366,9 +373,16 @@ document.addEventListener(
 "touchstart",
 (e)=>{
 
-if(locallyLocked){
+if(
+locallyLocked
+&&
+!document
+.getElementById("unlockBox")
+.contains(e.target)
+){
 
 e.stopPropagation();
+e.preventDefault();
 
 }
 
@@ -429,9 +443,13 @@ window.findDevice = async(id)=>{
 const user = auth.currentUser;
 
 await update(
-ref(db,'users/'+user.uid+'/devices/'+id),
+ref(
+db,
+'users/'+user.uid+'/devices/'+id
+),
 {
-alarm:true
+alarm:true,
+alarmTime:Date.now()
 }
 );
 
@@ -442,7 +460,10 @@ window.lockDevice = async(id)=>{
 const user = auth.currentUser;
 
 await update(
-ref(db,'users/'+user.uid+'/devices/'+id),
+ref(
+db,
+'users/'+user.uid+'/devices/'+id
+),
 {
 locked:true,
 alarm:true
@@ -456,7 +477,10 @@ window.unlockDeviceRemote = async(id)=>{
 const user = auth.currentUser;
 
 await update(
-ref(db,'users/'+user.uid+'/devices/'+id),
+ref(
+db,
+'users/'+user.uid+'/devices/'+id
+),
 {
 locked:false,
 alarm:false
@@ -478,7 +502,10 @@ currentName
 if(!newName)return;
 
 await update(
-ref(db,'users/'+user.uid+'/devices/'+id),
+ref(
+db,
+'users/'+user.uid+'/devices/'+id
+),
 {
 name:newName
 }
@@ -669,26 +696,19 @@ sound.currentTime = 0;
 
 }
 
-}
-);
-
-onValue(
-ref(
-db,
-'users/'+uid+'/devices/'+deviceId+'/alarm'
-),
-
-async(snapshot)=>{
-
-const alarm = snapshot.val();
-
-if(alarm===true){
+if(data.alarm===true){
 
 try{
 
+sound.loop = true;
+
 await sound.play();
 
-}catch(err){}
+}catch(err){
+
+console.log(err);
+
+}
 
 setTimeout(async()=>{
 
