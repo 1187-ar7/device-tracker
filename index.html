@@ -19,6 +19,7 @@ href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
 *{
 box-sizing:border-box;
+-webkit-tap-highlight-color:transparent;
 }
 
 body{
@@ -76,6 +77,11 @@ cursor:pointer;
 margin-top:10px;
 width:100%;
 font-size:15px;
+transition:0.2s;
+}
+
+button:hover{
+background:#3a3a3a;
 }
 
 .online{
@@ -98,6 +104,7 @@ padding:35px;
 border-radius:20px;
 text-align:center;
 z-index:2000;
+box-shadow:0 0 30px rgba(0,0,0,0.5);
 }
 
 #title{
@@ -127,6 +134,11 @@ line-height:1.5;
 word-break:break-word;
 }
 
+a{
+color:#66b3ff;
+text-decoration:none;
+}
+
 #lockScreen{
 display:none;
 position:fixed;
@@ -151,6 +163,7 @@ width:250px;
 border:none;
 border-radius:12px;
 text-align:center;
+outline:none;
 }
 
 @media (max-width:768px){
@@ -203,9 +216,7 @@ AR7 Tracker
 </div>
 
 <button id="enableSoundBtn">
-
 🔊 Enable Sound
-
 </button>
 
 <div id="deviceList"></div>
@@ -220,14 +231,20 @@ Logout
 
 <div id="lockScreen">
 
-<h1>
+<h1 style="
+font-size:42px;
+margin:0;
+">
 🔒 DEVICE LOCKED
 </h1>
 
-<p id="lostMessage">
-
+<p id="lostMessage"
+style="
+margin-top:20px;
+font-size:20px;
+color:#ccc;
+">
 This device is lost
-
 </p>
 
 <input
@@ -235,22 +252,21 @@ id="unlockPin"
 type="password"
 placeholder="Enter PIN"
 autocomplete="new-password"
+autocorrect="off"
+autocapitalize="off"
+spellcheck="false"
 >
 
 <button id="unlockBtn">
-
 Unlock Device
-
 </button>
 
 </div>
 
 <audio id="alarmSound">
-
 <source
 src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
 type="audio/ogg">
-
 </audio>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -311,7 +327,10 @@ const provider = new GoogleAuthProvider();
 const map = L.map('map').setView([20,78],4);
 
 L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+{
+attribution:'© OpenStreetMap'
+}
 ).addTo(map);
 
 const markers = {};
@@ -341,7 +360,7 @@ sound.pause();
 
 sound.currentTime = 0;
 
-alert("Sound enabled");
+alert("Sound enabled successfully");
 
 }catch(err){
 
@@ -355,7 +374,15 @@ document
 .getElementById("googleLogin")
 .onclick = async()=>{
 
+try{
+
 await signInWithPopup(auth,provider);
+
+}catch(err){
+
+alert(err.message);
+
+}
 
 };
 
@@ -367,7 +394,15 @@ signOut(auth);
 
 };
 
-window.findDevice = async(deviceId)=>{
+window.renameDevice = async(id,currentName)=>{
+
+const newName =
+prompt(
+"Enter new device name",
+currentName
+);
+
+if(!newName)return;
 
 const user = auth.currentUser;
 
@@ -375,7 +410,35 @@ await update(
 
 ref(
 db,
-'users/'+user.uid+'/devices/'+deviceId
+'users/'+user.uid+'/devices/'+id
+),
+
+{
+name:newName
+}
+
+);
+
+if(id===localStorage.getItem("deviceId")){
+
+localStorage.setItem(
+"deviceName",
+newName
+);
+
+}
+
+};
+
+window.findDevice = async(id)=>{
+
+const user = auth.currentUser;
+
+await update(
+
+ref(
+db,
+'users/'+user.uid+'/devices/'+id
 ),
 
 {
@@ -386,7 +449,7 @@ alarm:true
 
 };
 
-window.lockDevice = async(deviceId)=>{
+window.lockDevice = async(id)=>{
 
 const user = auth.currentUser;
 
@@ -394,7 +457,7 @@ await update(
 
 ref(
 db,
-'users/'+user.uid+'/devices/'+deviceId
+'users/'+user.uid+'/devices/'+id
 ),
 
 {
@@ -406,7 +469,7 @@ alarm:true
 
 };
 
-window.unlockDeviceRemote = async(deviceId)=>{
+window.unlockDeviceRemote = async(id)=>{
 
 const user = auth.currentUser;
 
@@ -414,7 +477,7 @@ await update(
 
 ref(
 db,
-'users/'+user.uid+'/devices/'+deviceId
+'users/'+user.uid+'/devices/'+id
 ),
 
 {
@@ -484,7 +547,9 @@ localStorage.getItem("devicePin");
 if(!devicePin){
 
 devicePin =
-prompt("Create device PIN");
+prompt(
+"Create 4 digit PIN"
+);
 
 localStorage.setItem(
 "devicePin",
@@ -537,9 +602,27 @@ document
 
 alert("Wrong PIN");
 
+document
+.getElementById("unlockPin")
+.value="";
+
 }
 
 };
+
+function getDeviceType(){
+
+const ua = navigator.userAgent;
+
+if(/mobile/i.test(ua))
+return "Phone";
+
+if(/tablet/i.test(ua))
+return "Tablet";
+
+return "Laptop/Desktop";
+
+}
 
 onValue(
 
@@ -560,9 +643,18 @@ document
 .getElementById("lockScreen")
 .style.display="flex";
 
+document
+.getElementById("lostMessage")
+.innerText =
+data.lostMessage || "This device is lost";
+
+try{
+
 sound.loop = true;
 
 sound.play();
+
+}catch(err){}
 
 }else{
 
@@ -573,6 +665,58 @@ document
 sound.pause();
 
 sound.currentTime = 0;
+
+}
+
+}
+
+);
+
+onValue(
+
+ref(
+db,
+'users/'+uid+'/devices/'+deviceId+'/alarm'
+),
+
+async(snapshot)=>{
+
+const alarm = snapshot.val();
+
+if(alarm===true){
+
+try{
+
+sound.loop = true;
+
+await sound.play();
+
+}catch(err){
+
+console.log(err);
+
+}
+
+setTimeout(async()=>{
+
+sound.pause();
+
+sound.currentTime = 0;
+
+await update(
+
+ref(
+db,
+'users/'+uid+'/devices/'+deviceId
+),
+
+{
+alarm:false
+}
+
+);
+
+},10000);
 
 }
 
@@ -619,6 +763,16 @@ const deviceData = {
 
 name:deviceName,
 
+platform:navigator.platform,
+
+deviceType:getDeviceType(),
+
+manufacturer:
+navigator.vendor || "Unknown",
+
+browser:
+navigator.userAgent,
+
 lat:lat,
 lng:lng,
 
@@ -650,7 +804,10 @@ markers[deviceId]
 
 markers[deviceId] =
 L.marker([lat,lng])
-.addTo(map);
+.addTo(map)
+.bindPopup(deviceName);
+
+map.setView([lat,lng],16);
 
 }
 
@@ -663,7 +820,9 @@ console.log(error);
 },
 
 {
-enableHighAccuracy:true
+enableHighAccuracy:true,
+maximumAge:0,
+timeout:10000
 }
 
 );
@@ -692,18 +851,56 @@ const d = data[id];
 const online =
 Date.now()-d.updated < 15000;
 
+const lastSeen =
+new Date(d.updated)
+.toLocaleString();
+
 document
 .getElementById("deviceList")
 .innerHTML += `
 
 <div class="device">
 
-<h3>${d.name}</h3>
+<div style="
+font-size:22px;
+font-weight:bold;
+">
+
+📱 ${d.name}
+
+</div>
 
 <div class="info">
+🖥️ Type:
+${d.deviceType || "Unknown"}
+</div>
 
-🔋 ${d.battery}
+<div class="info">
+🏢 Company:
+${d.manufacturer || "Unknown"}
+</div>
 
+<div class="info">
+💻 Platform:
+${d.platform || "Unknown"}
+</div>
+
+<div class="info">
+🔋 Battery:
+${d.battery || "Unknown"}
+</div>
+
+<div class="info">
+📍 Coordinates:
+<br>
+${d.lat?.toFixed(5)},
+${d.lng?.toFixed(5)}
+</div>
+
+<div class="info">
+🕒 Last Online:
+<br>
+${lastSeen}
 </div>
 
 <div class="info">
@@ -711,12 +908,32 @@ document
 ${
 online
 ?
-'<span class="online">ONLINE</span>'
+'<span class="online">🟢 Online</span>'
 :
-'<span class="offline">OFFLINE</span>'
+'<span class="offline">🔴 Offline</span>'
 }
 
 </div>
+
+<div class="info">
+
+<a target="_blank"
+href="https://maps.google.com/?q=${d.lat},${d.lng}">
+
+Open In Google Maps
+
+</a>
+
+</div>
+
+<button onclick="renameDevice(
+'${id}',
+'${d.name}'
+)">
+
+✏️ Rename Device
+
+</button>
 
 <button onclick="findDevice(
 '${id}'
@@ -746,11 +963,31 @@ online
 
 `;
 
-});
+if(markers[id]){
+
+markers[id]
+.setLatLng([d.lat,d.lng]);
+
+}else{
+
+markers[id] =
+L.marker([d.lat,d.lng])
+.addTo(map)
+.bindPopup(d.name);
+
+}
 
 });
 
 });
+
+});
+
+if("serviceWorker" in navigator){
+
+navigator.serviceWorker.register("sw.js");
+
+}
 
 </script>
 
