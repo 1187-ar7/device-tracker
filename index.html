@@ -77,11 +77,6 @@ cursor:pointer;
 margin-top:10px;
 width:100%;
 font-size:15px;
-transition:0.2s;
-}
-
-button:hover{
-background:#3a3a3a;
 }
 
 .online{
@@ -104,7 +99,6 @@ padding:35px;
 border-radius:20px;
 text-align:center;
 z-index:2000;
-box-shadow:0 0 30px rgba(0,0,0,0.5);
 }
 
 #title{
@@ -134,11 +128,6 @@ line-height:1.5;
 word-break:break-word;
 }
 
-a{
-color:#66b3ff;
-text-decoration:none;
-}
-
 #lockScreen{
 display:none;
 position:fixed;
@@ -147,23 +136,31 @@ left:0;
 width:100%;
 height:100%;
 background:black;
-z-index:99999;
+z-index:999999;
 justify-content:center;
 align-items:center;
 flex-direction:column;
-text-align:center;
 padding:20px;
 }
 
+#unlockBox{
+background:#1a1a1a;
+padding:25px;
+border-radius:20px;
+width:100%;
+max-width:350px;
+text-align:center;
+}
+
 #unlockPin{
-margin-top:25px;
+margin-top:20px;
 padding:15px;
 font-size:20px;
-width:250px;
+width:100%;
 border:none;
 border-radius:12px;
-text-align:center;
 outline:none;
+text-align:center;
 }
 
 @media (max-width:768px){
@@ -231,19 +228,13 @@ Logout
 
 <div id="lockScreen">
 
-<h1 style="
-font-size:42px;
-margin:0;
-">
+<div id="unlockBox">
+
+<h1>
 🔒 DEVICE LOCKED
 </h1>
 
-<p id="lostMessage"
-style="
-margin-top:20px;
-font-size:20px;
-color:#ccc;
-">
+<p id="lostMessage">
 This device is lost
 </p>
 
@@ -251,10 +242,7 @@ This device is lost
 id="unlockPin"
 type="password"
 placeholder="Enter PIN"
-autocomplete="new-password"
-autocorrect="off"
-autocapitalize="off"
-spellcheck="false"
+autocomplete="off"
 >
 
 <button id="unlockBtn">
@@ -263,10 +251,14 @@ Unlock Device
 
 </div>
 
-<audio id="alarmSound">
+</div>
+
+<audio id="alarmSound" loop>
+
 <source
 src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
 type="audio/ogg">
+
 </audio>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -327,10 +319,7 @@ const provider = new GoogleAuthProvider();
 const map = L.map('map').setView([20,78],4);
 
 L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-{
-attribution:'© OpenStreetMap'
-}
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 ).addTo(map);
 
 const markers = {};
@@ -360,7 +349,7 @@ sound.pause();
 
 sound.currentTime = 0;
 
-alert("Sound enabled successfully");
+alert("Sound enabled");
 
 }catch(err){
 
@@ -374,15 +363,7 @@ document
 .getElementById("googleLogin")
 .onclick = async()=>{
 
-try{
-
 await signInWithPopup(auth,provider);
-
-}catch(err){
-
-alert(err.message);
-
-}
 
 };
 
@@ -391,42 +372,6 @@ document
 .onclick = ()=>{
 
 signOut(auth);
-
-};
-
-window.renameDevice = async(id,currentName)=>{
-
-const newName =
-prompt(
-"Enter new device name",
-currentName
-);
-
-if(!newName)return;
-
-const user = auth.currentUser;
-
-await update(
-
-ref(
-db,
-'users/'+user.uid+'/devices/'+id
-),
-
-{
-name:newName
-}
-
-);
-
-if(id===localStorage.getItem("deviceId")){
-
-localStorage.setItem(
-"deviceName",
-newName
-);
-
-}
 
 };
 
@@ -489,6 +434,42 @@ alarm:false
 
 };
 
+window.renameDevice = async(id,currentName)=>{
+
+const user = auth.currentUser;
+
+const newName =
+prompt(
+"Enter new name",
+currentName
+);
+
+if(!newName)return;
+
+await update(
+
+ref(
+db,
+'users/'+user.uid+'/devices/'+id
+),
+
+{
+name:newName
+}
+
+);
+
+if(id===localStorage.getItem("deviceId")){
+
+localStorage.setItem(
+"deviceName",
+newName
+);
+
+}
+
+};
+
 onAuthStateChanged(auth,async(user)=>{
 
 if(!user){
@@ -547,9 +528,7 @@ localStorage.getItem("devicePin");
 if(!devicePin){
 
 devicePin =
-prompt(
-"Create 4 digit PIN"
-);
+prompt("Create device PIN");
 
 localStorage.setItem(
 "devicePin",
@@ -610,20 +589,6 @@ document
 
 };
 
-function getDeviceType(){
-
-const ua = navigator.userAgent;
-
-if(/mobile/i.test(ua))
-return "Phone";
-
-if(/tablet/i.test(ua))
-return "Tablet";
-
-return "Laptop/Desktop";
-
-}
-
 onValue(
 
 ref(
@@ -643,18 +608,7 @@ document
 .getElementById("lockScreen")
 .style.display="flex";
 
-document
-.getElementById("lostMessage")
-.innerText =
-data.lostMessage || "This device is lost";
-
-try{
-
-sound.loop = true;
-
 sound.play();
-
-}catch(err){}
 
 }else{
 
@@ -687,15 +641,9 @@ if(alarm===true){
 
 try{
 
-sound.loop = true;
-
 await sound.play();
 
-}catch(err){
-
-console.log(err);
-
-}
+}catch(err){}
 
 setTimeout(async()=>{
 
@@ -723,6 +671,20 @@ alarm:false
 }
 
 );
+
+function getDeviceType(){
+
+const ua = navigator.userAgent;
+
+if(/mobile/i.test(ua))
+return "Phone";
+
+if(/tablet/i.test(ua))
+return "Tablet";
+
+return "Laptop/Desktop";
+
+}
 
 navigator.geolocation.watchPosition(
 
@@ -820,9 +782,7 @@ console.log(error);
 },
 
 {
-enableHighAccuracy:true,
-maximumAge:0,
-timeout:10000
+enableHighAccuracy:true
 }
 
 );
@@ -865,42 +825,28 @@ document
 font-size:22px;
 font-weight:bold;
 ">
-
 📱 ${d.name}
-
 </div>
 
 <div class="info">
-🖥️ Type:
-${d.deviceType || "Unknown"}
+🖥️ ${d.deviceType}
 </div>
 
 <div class="info">
-🏢 Company:
-${d.manufacturer || "Unknown"}
+🏢 ${d.manufacturer}
 </div>
 
 <div class="info">
-💻 Platform:
-${d.platform || "Unknown"}
+🔋 ${d.battery}
 </div>
 
 <div class="info">
-🔋 Battery:
-${d.battery || "Unknown"}
-</div>
-
-<div class="info">
-📍 Coordinates:
-<br>
-${d.lat?.toFixed(5)},
+📍 ${d.lat?.toFixed(5)},
 ${d.lng?.toFixed(5)}
 </div>
 
 <div class="info">
-🕒 Last Online:
-<br>
-${lastSeen}
+🕒 ${lastSeen}
 </div>
 
 <div class="info">
@@ -915,48 +861,29 @@ online
 
 </div>
 
-<div class="info">
-
-<a target="_blank"
-href="https://maps.google.com/?q=${d.lat},${d.lng}">
-
-Open In Google Maps
-
-</a>
-
-</div>
-
 <button onclick="renameDevice(
 '${id}',
 '${d.name}'
 )">
-
 ✏️ Rename Device
-
 </button>
 
 <button onclick="findDevice(
 '${id}'
 )">
-
 🔔 Find Device
-
 </button>
 
 <button onclick="lockDevice(
 '${id}'
 )">
-
 🔒 Lock Device
-
 </button>
 
 <button onclick="unlockDeviceRemote(
 '${id}'
 )">
-
 🔓 Unlock Device
-
 </button>
 
 </div>
