@@ -1,3 +1,4 @@
+```html id="removeunlockbuttonfullcode"
 <!DOCTYPE html>
 <html>
 
@@ -170,19 +171,6 @@ max-width:350px;
 text-align:center;
 }
 
-#unlockPin{
-margin-top:20px;
-padding:15px;
-font-size:20px;
-width:100%;
-border:none;
-border-radius:12px;
-outline:none;
-text-align:center;
-background:#2b2b2b;
-color:white;
-}
-
 @media (max-width:768px){
 
 #map{
@@ -258,16 +246,12 @@ Logout
 This device is lost
 </p>
 
-<input
-id="unlockPin"
-type="password"
-placeholder="Enter PIN"
-autocomplete="off"
->
-
-<button id="unlockBtn">
-Unlock Device
-</button>
+<p style="
+margin-top:20px;
+color:#999;
+">
+Unlock remotely from another device
+</p>
 
 </div>
 
@@ -589,65 +573,6 @@ devicePin
 
 }
 
-document
-.getElementById("unlockBtn")
-.onclick = async()=>{
-
-const pin =
-document
-.getElementById("unlockPin")
-.value;
-
-const snap = await get(
-ref(
-db,
-'users/'+uid+'/devices/'+deviceId
-)
-);
-
-const data = snap.val();
-
-if(pin===data.lockPin){
-
-locallyLocked = false;
-
-await update(
-ref(
-db,
-'users/'+uid+'/devices/'+deviceId
-),
-{
-locked:false,
-alarm:false
-}
-);
-
-document
-.getElementById("lockScreen")
-.style.display="none";
-
-document.body.classList.remove("locked");
-
-sound.pause();
-
-sound.currentTime = 0;
-
-document
-.getElementById("unlockPin")
-.value="";
-
-}else{
-
-alert("Wrong PIN");
-
-document
-.getElementById("unlockPin")
-.value="";
-
-}
-
-};
-
 onValue(
 ref(
 db,
@@ -680,9 +605,9 @@ await sound.play();
 
 if(
 data.locked===false
-&&
-locallyLocked===false
 ){
+
+locallyLocked = false;
 
 document
 .getElementById("lockScreen")
@@ -982,3 +907,4 @@ navigator.serviceWorker.register("sw.js");
 </body>
 
 </html>
+```
