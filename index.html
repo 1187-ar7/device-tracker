@@ -79,6 +79,10 @@ width:100%;
 font-size:15px;
 }
 
+button:hover{
+background:#3a3a3a;
+}
+
 .online{
 color:#00ff88;
 font-weight:bold;
@@ -99,6 +103,7 @@ padding:35px;
 border-radius:20px;
 text-align:center;
 z-index:2000;
+box-shadow:0 0 30px rgba(0,0,0,0.5);
 }
 
 #title{
@@ -141,6 +146,7 @@ justify-content:center;
 align-items:center;
 flex-direction:column;
 padding:20px;
+touch-action:none;
 }
 
 #unlockBox{
@@ -161,6 +167,8 @@ border:none;
 border-radius:12px;
 outline:none;
 text-align:center;
+background:#2b2b2b;
+color:white;
 }
 
 @media (max-width:768px){
@@ -326,6 +334,8 @@ const markers = {};
 
 const sound =
 document.getElementById("alarmSound");
+
+let locallyLocked = false;
 
 document
 .getElementById("menuBtn")
@@ -559,6 +569,8 @@ const data = snap.val();
 
 if(pin===data.lockPin){
 
+locallyLocked = false;
+
 await update(
 
 ref(
@@ -572,6 +584,14 @@ alarm:false
 }
 
 );
+
+document
+.getElementById("lockScreen")
+.style.display="none";
+
+sound.pause();
+
+sound.currentTime = 0;
 
 document
 .getElementById("unlockPin")
@@ -596,7 +616,7 @@ db,
 'users/'+uid+'/devices/'+deviceId
 ),
 
-(snapshot)=>{
+async(snapshot)=>{
 
 const data = snapshot.val();
 
@@ -604,13 +624,27 @@ if(!data)return;
 
 if(data.locked===true){
 
+locallyLocked = true;
+
 document
 .getElementById("lockScreen")
 .style.display="flex";
 
-sound.play();
+document.body.style.overflow="hidden";
 
-}else{
+try{
+
+await sound.play();
+
+}catch(err){}
+
+}
+
+if(
+data.locked===false
+&&
+locallyLocked===false
+){
 
 document
 .getElementById("lockScreen")
@@ -782,7 +816,9 @@ console.log(error);
 },
 
 {
-enableHighAccuracy:true
+enableHighAccuracy:true,
+maximumAge:0,
+timeout:10000
 }
 
 );
@@ -834,6 +870,10 @@ font-weight:bold;
 
 <div class="info">
 🏢 ${d.manufacturer}
+</div>
+
+<div class="info">
+💻 ${d.platform}
 </div>
 
 <div class="info">
