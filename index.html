@@ -76,11 +76,6 @@ cursor:pointer;
 margin-top:10px;
 width:100%;
 font-size:15px;
-transition:0.2s;
-}
-
-button:hover{
-background:#3a3a3a;
 }
 
 .online{
@@ -103,7 +98,6 @@ padding:35px;
 border-radius:20px;
 text-align:center;
 z-index:2000;
-box-shadow:0 0 30px rgba(0,0,0,0.5);
 }
 
 #title{
@@ -133,11 +127,6 @@ line-height:1.5;
 word-break:break-word;
 }
 
-a{
-color:#66b3ff;
-text-decoration:none;
-}
-
 #lockScreen{
 display:none;
 position:fixed;
@@ -146,7 +135,7 @@ left:0;
 width:100%;
 height:100%;
 background:black;
-z-index:5000;
+z-index:99999;
 justify-content:center;
 align-items:center;
 flex-direction:column;
@@ -231,21 +220,11 @@ Logout
 
 <div id="lockScreen">
 
-<h1 style="
-font-size:42px;
-margin:0;
-">
-
+<h1>
 🔒 DEVICE LOCKED
-
 </h1>
 
-<p id="lostMessage"
-style="
-margin-top:20px;
-font-size:20px;
-color:#ccc;
-">
+<p id="lostMessage">
 
 This device is lost
 
@@ -255,10 +234,7 @@ This device is lost
 id="unlockPin"
 type="password"
 placeholder="Enter PIN"
-autocomplete="off"
-autocorrect="off"
-autocapitalize="off"
-spellcheck="false"
+autocomplete="new-password"
 >
 
 <button id="unlockBtn">
@@ -269,7 +245,7 @@ Unlock Device
 
 </div>
 
-<audio id="alarmSound" autoplay>
+<audio id="alarmSound">
 
 <source
 src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
@@ -289,7 +265,8 @@ getDatabase,
 ref,
 set,
 onValue,
-update
+update,
+get
 }
 from "https://www.gstatic.com/firebasejs/12.13.0/firebase-database.js";
 
@@ -334,16 +311,23 @@ const provider = new GoogleAuthProvider();
 const map = L.map('map').setView([20,78],4);
 
 L.tileLayer(
-'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-{
-attribution:'© OpenStreetMap'
-}
+'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 ).addTo(map);
 
 const markers = {};
 
 const sound =
 document.getElementById("alarmSound");
+
+document
+.getElementById("menuBtn")
+.onclick = ()=>{
+
+document
+.getElementById("sidebar")
+.classList.toggle("show");
+
+};
 
 document
 .getElementById("enableSoundBtn")
@@ -357,97 +341,21 @@ sound.pause();
 
 sound.currentTime = 0;
 
-alert("Sound enabled successfully");
+alert("Sound enabled");
 
 }catch(err){
 
-alert("Click again to enable sound");
+alert("Tap again");
 
 }
-
-};
-
-document
-.getElementById("unlockBtn")
-.onclick = async()=>{
-
-const pin =
-document
-.getElementById("unlockPin")
-.value;
-
-const user = auth.currentUser;
-
-const deviceId =
-localStorage.getItem("deviceId");
-
-onValue(
-
-ref(
-db,
-'users/'+user.uid+'/devices/'+deviceId
-),
-
-async(snapshot)=>{
-
-const data = snapshot.val();
-
-if(pin===data.lockPin){
-
-await update(
-
-ref(
-db,
-'users/'+user.uid+'/devices/'+deviceId
-),
-
-{
-locked:false,
-alarm:false
-}
-
-);
-
-}else{
-
-alert("Wrong PIN");
-
-}
-
-},
-{
-onlyOnce:true
-}
-
-);
-
-};
-
-document
-.getElementById("menuBtn")
-.onclick = ()=>{
-
-document
-.getElementById("sidebar")
-.classList.toggle("show");
 
 };
 
 document
 .getElementById("googleLogin")
-.onclick = async ()=>{
-
-try{
+.onclick = async()=>{
 
 await signInWithPopup(auth,provider);
-
-}catch(err){
-
-alert(err.message);
-
-console.log(err);
-
-}
 
 };
 
@@ -459,30 +367,28 @@ signOut(auth);
 
 };
 
-window.renameDevice = (currentName)=>{
+window.findDevice = async(deviceId)=>{
 
-const newName =
-prompt(
-"Enter new device name",
-currentName
+const user = auth.currentUser;
+
+await update(
+
+ref(
+db,
+'users/'+user.uid+'/devices/'+deviceId
+),
+
+{
+alarm:true
+}
+
 );
-
-if(!newName)return;
-
-localStorage.setItem(
-"deviceName",
-newName
-);
-
-location.reload();
 
 };
 
 window.lockDevice = async(deviceId)=>{
 
 const user = auth.currentUser;
-
-if(!user)return;
 
 await update(
 
@@ -504,8 +410,6 @@ window.unlockDeviceRemote = async(deviceId)=>{
 
 const user = auth.currentUser;
 
-if(!user)return;
-
 await update(
 
 ref(
@@ -522,28 +426,7 @@ alarm:false
 
 };
 
-window.findDevice = async(deviceId)=>{
-
-const user = auth.currentUser;
-
-if(!user)return;
-
-await update(
-
-ref(
-db,
-'users/'+user.uid+'/devices/'+deviceId
-),
-
-{
-alarm:true
-}
-
-);
-
-};
-
-onAuthStateChanged(auth,(user)=>{
+onAuthStateChanged(auth,async(user)=>{
 
 if(!user){
 
@@ -601,9 +484,7 @@ localStorage.getItem("devicePin");
 if(!devicePin){
 
 devicePin =
-prompt(
-"Create 4 digit PIN for this device"
-);
+prompt("Create device PIN");
 
 localStorage.setItem(
 "devicePin",
@@ -612,17 +493,53 @@ devicePin
 
 }
 
-function getDeviceType(){
+document
+.getElementById("unlockBtn")
+.onclick = async()=>{
 
-const ua = navigator.userAgent;
+const pin =
+document
+.getElementById("unlockPin")
+.value;
 
-if(/mobile/i.test(ua)) return "Phone";
+const snap = await get(
 
-if(/tablet/i.test(ua)) return "Tablet";
+ref(
+db,
+'users/'+uid+'/devices/'+deviceId
+)
 
-return "Laptop/Desktop";
+);
+
+const data = snap.val();
+
+if(pin===data.lockPin){
+
+await update(
+
+ref(
+db,
+'users/'+uid+'/devices/'+deviceId
+),
+
+{
+locked:false,
+alarm:false
+}
+
+);
+
+document
+.getElementById("unlockPin")
+.value="";
+
+}else{
+
+alert("Wrong PIN");
 
 }
+
+};
 
 onValue(
 
@@ -643,22 +560,9 @@ document
 .getElementById("lockScreen")
 .style.display="flex";
 
-document
-.getElementById("lostMessage")
-.innerText =
-data.lostMessage;
-
-try{
-
 sound.loop = true;
 
 sound.play();
-
-}catch(err){
-
-console.log(err);
-
-}
 
 }else{
 
@@ -669,60 +573,6 @@ document
 sound.pause();
 
 sound.currentTime = 0;
-
-}
-
-}
-
-);
-
-onValue(
-
-ref(
-db,
-'users/'+uid+'/devices/'+deviceId+'/alarm'
-),
-
-async(snapshot)=>{
-
-const alarm = snapshot.val();
-
-if(alarm===true){
-
-try{
-
-sound.loop = true;
-
-await sound.play();
-
-}catch(err){
-
-alert("REMOTE FIND REQUEST");
-
-console.log(err);
-
-}
-
-setTimeout(async()=>{
-
-sound.pause();
-
-sound.currentTime = 0;
-
-await update(
-
-ref(
-db,
-'users/'+uid+'/devices/'+deviceId
-),
-
-{
-alarm:false
-}
-
-);
-
-},10000);
 
 }
 
@@ -741,7 +591,8 @@ let batteryLevel = "Unknown";
 
 if(navigator.getBattery){
 
-const battery = await navigator.getBattery();
+const battery =
+await navigator.getBattery();
 
 batteryLevel =
 Math.round(
@@ -750,19 +601,23 @@ battery.level*100
 
 }
 
+const oldSnap = await get(
+
+ref(
+db,
+'users/'+uid+'/devices/'+deviceId
+)
+
+);
+
+const oldData =
+oldSnap.val() || {};
+
 const deviceData = {
 
+...oldData,
+
 name:deviceName,
-
-platform:navigator.platform,
-
-deviceType:getDeviceType(),
-
-manufacturer:
-navigator.vendor || "Unknown",
-
-browser:
-navigator.userAgent,
 
 lat:lat,
 lng:lng,
@@ -771,13 +626,7 @@ battery:batteryLevel,
 
 updated:Date.now(),
 
-alarm:false,
-
-locked:false,
-
-lockPin:devicePin,
-
-lostMessage:"This device is lost"
+lockPin:devicePin
 
 };
 
@@ -792,19 +641,16 @@ deviceData
 
 );
 
-if(!markers[deviceId]){
-
-markers[deviceId] =
-L.marker([lat,lng])
-.addTo(map)
-.bindPopup(deviceName);
-
-map.setView([lat,lng],16);
-
-}else{
+if(markers[deviceId]){
 
 markers[deviceId]
 .setLatLng([lat,lng]);
+
+}else{
+
+markers[deviceId] =
+L.marker([lat,lng])
+.addTo(map);
 
 }
 
@@ -812,23 +658,22 @@ markers[deviceId]
 
 (error)=>{
 
-alert("Please allow location access");
-
 console.log(error);
 
 },
 
 {
-enableHighAccuracy:true,
-maximumAge:0,
-timeout:10000
+enableHighAccuracy:true
 }
 
 );
 
 onValue(
 
-ref(db,'users/'+uid+'/devices'),
+ref(
+db,
+'users/'+uid+'/devices'
+),
 
 (snapshot)=>{
 
@@ -840,16 +685,12 @@ document
 
 if(!data)return;
 
-for(const id in data){
+Object.keys(data).forEach((id)=>{
 
 const d = data[id];
 
 const online =
 Date.now()-d.updated < 15000;
-
-const lastSeen =
-new Date(d.updated)
-.toLocaleString();
 
 document
 .getElementById("deviceList")
@@ -857,61 +698,11 @@ document
 
 <div class="device">
 
-<div style="
-font-size:22px;
-font-weight:bold;
-">
-
-📱 ${d.name}
-
-</div>
+<h3>${d.name}</h3>
 
 <div class="info">
 
-🖥️ Type:
-${d.deviceType}
-
-</div>
-
-<div class="info">
-
-🏢 Company:
-${d.manufacturer}
-
-</div>
-
-<div class="info">
-
-💻 Platform:
-${d.platform}
-
-</div>
-
-<div class="info">
-
-🔋 Battery:
-${d.battery}
-
-</div>
-
-<div class="info">
-
-📍 Coordinates:
-
-<br>
-
-${d.lat.toFixed(5)},
-${d.lng.toFixed(5)}
-
-</div>
-
-<div class="info">
-
-🕒 Last Online:
-
-<br>
-
-${lastSeen}
+🔋 ${d.battery}
 
 </div>
 
@@ -920,31 +711,12 @@ ${lastSeen}
 ${
 online
 ?
-'<span class="online">🟢 Online</span>'
+'<span class="online">ONLINE</span>'
 :
-'<span class="offline">🔴 Offline</span>'
+'<span class="offline">OFFLINE</span>'
 }
 
 </div>
-
-<div class="info">
-
-<a target="_blank"
-href="https://maps.google.com/?q=${d.lat},${d.lng}">
-
-Open In Google Maps
-
-</a>
-
-</div>
-
-<button onclick="renameDevice(
-'${d.name}'
-)">
-
-✏️ Rename Device
-
-</button>
 
 <button onclick="findDevice(
 '${id}'
@@ -974,33 +746,11 @@ Open In Google Maps
 
 `;
 
-if(markers[id]){
-
-markers[id]
-.setLatLng([d.lat,d.lng]);
-
-}else{
-
-markers[id] =
-L.marker([d.lat,d.lng])
-.addTo(map)
-.bindPopup(d.name);
-
-}
-
-}
-
-}
-
-);
+});
 
 });
 
-if("serviceWorker" in navigator){
-
-navigator.serviceWorker.register("sw.js");
-
-}
+});
 
 </script>
 
