@@ -138,6 +138,32 @@ color:#66b3ff;
 text-decoration:none;
 }
 
+#lockScreen{
+display:none;
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:black;
+z-index:5000;
+justify-content:center;
+align-items:center;
+flex-direction:column;
+text-align:center;
+padding:20px;
+}
+
+#unlockPin{
+margin-top:25px;
+padding:15px;
+font-size:20px;
+width:250px;
+border:none;
+border-radius:12px;
+text-align:center;
+}
+
 @media (max-width:768px){
 
 #map{
@@ -203,6 +229,42 @@ Logout
 
 <div id="map"></div>
 
+<div id="lockScreen">
+
+<h1 style="
+font-size:42px;
+margin:0;
+">
+
+🔒 DEVICE LOCKED
+
+</h1>
+
+<p id="lostMessage"
+style="
+margin-top:20px;
+font-size:20px;
+color:#ccc;
+">
+
+This device is lost
+
+</p>
+
+<input
+id="unlockPin"
+type="password"
+placeholder="Enter PIN"
+>
+
+<button id="unlockBtn">
+
+Unlock Device
+
+</button>
+
+</div>
+
 <audio id="alarmSound" autoplay>
 
 <source
@@ -238,22 +300,19 @@ from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
 
 const firebaseConfig = {
 
-apiKey:"AIzaSyA9019b2kvsZFJTjzvdGMIWxHWC5UreHr4",
+apiKey:"YOUR_API_KEY",
 
-authDomain:"device-tracker-ar7.firebaseapp.com",
+authDomain:"YOUR_AUTH_DOMAIN",
 
-databaseURL:
-"https://device-tracker-ar7-default-rtdb.asia-southeast1.firebasedatabase.app",
+databaseURL:"YOUR_DATABASE_URL",
 
-projectId:"device-tracker-ar7",
+projectId:"YOUR_PROJECT_ID",
 
-storageBucket:
-"device-tracker-ar7.firebasestorage.app",
+storageBucket:"YOUR_STORAGE_BUCKET",
 
-messagingSenderId:"1027897374944",
+messagingSenderId:"YOUR_MESSAGING_SENDER_ID",
 
-appId:
-"1:1027897374944:web:64826f4587e10ec99a7885"
+appId:"YOUR_APP_ID"
 
 };
 
@@ -298,6 +357,62 @@ alert("Sound enabled successfully");
 alert("Click again to enable sound");
 
 }
+
+};
+
+document
+.getElementById("unlockBtn")
+.onclick = async()=>{
+
+const pin =
+document
+.getElementById("unlockPin")
+.value;
+
+const user = auth.currentUser;
+
+const deviceId =
+localStorage.getItem("deviceId");
+
+onValue(
+
+ref(
+db,
+'users/'+user.uid+'/devices/'+deviceId
+),
+
+async(snapshot)=>{
+
+const data = snapshot.val();
+
+if(pin===data.lockPin){
+
+await update(
+
+ref(
+db,
+'users/'+user.uid+'/devices/'+deviceId
+),
+
+{
+locked:false,
+alarm:false
+}
+
+);
+
+}else{
+
+alert("Wrong PIN");
+
+}
+
+},
+{
+onlyOnce:true
+}
+
+);
 
 };
 
@@ -351,6 +466,50 @@ newName
 );
 
 location.reload();
+
+};
+
+window.lockDevice = async(deviceId)=>{
+
+const user = auth.currentUser;
+
+if(!user)return;
+
+await update(
+
+ref(
+db,
+'users/'+user.uid+'/devices/'+deviceId
+),
+
+{
+locked:true,
+alarm:true
+}
+
+);
+
+};
+
+window.unlockDeviceRemote = async(deviceId)=>{
+
+const user = auth.currentUser;
+
+if(!user)return;
+
+await update(
+
+ref(
+db,
+'users/'+user.uid+'/devices/'+deviceId
+),
+
+{
+locked:false,
+alarm:false
+}
+
+);
 
 };
 
@@ -438,6 +597,58 @@ if(/tablet/i.test(ua)) return "Tablet";
 return "Laptop/Desktop";
 
 }
+
+onValue(
+
+ref(
+db,
+'users/'+uid+'/devices/'+deviceId
+),
+
+(snapshot)=>{
+
+const data = snapshot.val();
+
+if(!data)return;
+
+if(data.locked===true){
+
+document
+.getElementById("lockScreen")
+.style.display="flex";
+
+document
+.getElementById("lostMessage")
+.innerText =
+data.lostMessage;
+
+try{
+
+sound.loop = true;
+
+sound.play();
+
+}catch(err){
+
+console.log(err);
+
+}
+
+}else{
+
+document
+.getElementById("lockScreen")
+.style.display="none";
+
+sound.pause();
+
+sound.currentTime = 0;
+
+}
+
+}
+
+);
 
 onValue(
 
@@ -534,7 +745,13 @@ battery:batteryLevel,
 
 updated:Date.now(),
 
-alarm:false
+alarm:false,
+
+locked:false,
+
+lockPin:"1234",
+
+lostMessage:"This device is lost"
 
 };
 
@@ -708,6 +925,22 @@ Open In Google Maps
 )">
 
 🔔 Find Device
+
+</button>
+
+<button onclick="lockDevice(
+'${id}'
+)">
+
+🔒 Lock Device
+
+</button>
+
+<button onclick="unlockDeviceRemote(
+'${id}'
+)">
+
+🔓 Unlock Device
 
 </button>
 
