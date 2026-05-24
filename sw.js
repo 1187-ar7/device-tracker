@@ -1,61 +1,25 @@
-const CACHE_NAME = "ar7-v3";
-
-const urlsToCache = [
-"/",
-"/index.html",
-"/manifest.json",
-"/alarm.mp3"
-];
-
 self.addEventListener(
-"install",
-event=>{
-
-self.skipWaiting();
-
-event.waitUntil(
-
-caches.open(CACHE_NAME)
-.then(cache=>{
-
-return cache.addAll(
-urlsToCache
-);
-
-})
-
-);
-
-}
+'install',
+()=>self.skipWaiting()
 );
 
 self.addEventListener(
-"activate",
+'activate',
 event=>{
 
 event.waitUntil(
 clients.claim()
 );
 
-}
-);
+});
 
 self.addEventListener(
-"fetch",
+'fetch',
 event=>{
 
 event.respondWith(
-
 fetch(event.request)
-.catch(()=>{
-
-return caches.match(
-event.request
+.catch(()=>caches.match(event.request))
 );
 
-})
-
-);
-
-}
-);
+});

@@ -275,8 +275,6 @@ autocomplete="off"
 
 <audio
 id="alarmSound"
-loop
-playsinline
 preload="auto"
 >
 
@@ -331,7 +329,7 @@ databaseURL:
 projectId:"device-tracker-ar7",
 
 storageBucket:
-"device-tracker-ar7.firebasestorage.app",
+"device-tracker-ar7.firebasedatabase.app",
 
 messagingSenderId:"1027897374944",
 
@@ -361,14 +359,7 @@ const markers = {};
 const sound =
 document.getElementById("alarmSound");
 
-sound.setAttribute(
-'playsinline',
-'true'
-);
-
 sound.volume = 1;
-
-sound.muted = false;
 
 let locallyLocked = false;
 
@@ -377,47 +368,6 @@ let antiTheftEnabled = false;
 let lastX = null;
 let lastY = null;
 let lastZ = null;
-
-document.addEventListener(
-"touchmove",
-(e)=>{
-
-if(
-locallyLocked
-&&
-!document
-.getElementById("unlockBox")
-.contains(e.target)
-){
-
-e.preventDefault();
-
-}
-
-},
-{ passive:false }
-);
-
-document.addEventListener(
-"touchstart",
-(e)=>{
-
-if(
-locallyLocked
-&&
-!document
-.getElementById("unlockBox")
-.contains(e.target)
-){
-
-e.stopPropagation();
-e.preventDefault();
-
-}
-
-},
-true
-);
 
 document
 .getElementById("menuBtn")
@@ -431,39 +381,27 @@ document
 
 document
 .getElementById("enableSoundBtn")
-.onclick = async()=>{
+.onclick = ()=>{
 
-try{
-
-sound.pause();
-
-sound.currentTime = 0;
-
-sound.muted = false;
-
-sound.volume = 1;
-
-await sound.play();
-
-setTimeout(()=>{
+sound.play()
+.then(()=>{
 
 sound.pause();
 
 sound.currentTime = 0;
 
-},500);
+alert("Sound enabled");
 
-alert("Sound enabled successfully");
-
-}catch(err){
+})
+.catch(err=>{
 
 console.log(err);
 
 alert(
-"Sound permission blocked"
+"Click button once again"
 );
 
-}
+});
 
 };
 
@@ -780,17 +718,15 @@ document.body.classList.add("locked");
 
 try{
 
-sound.pause();
-
 sound.currentTime = 0;
-
-sound.muted = false;
-
-sound.volume = 1;
 
 await sound.play();
 
-}catch(err){}
+}catch(err){
+
+console.log(err);
+
+}
 
 }
 
@@ -816,13 +752,7 @@ if(data.alarm===true){
 
 try{
 
-sound.pause();
-
 sound.currentTime = 0;
-
-sound.muted = false;
-
-sound.volume = 1;
 
 await sound.play();
 
@@ -1127,13 +1057,7 @@ if(diff > 15){
 
 try{
 
-sound.pause();
-
 sound.currentTime = 0;
-
-sound.muted = false;
-
-sound.volume = 1;
 
 await sound.play();
 
