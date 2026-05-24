@@ -275,12 +275,14 @@ autocomplete="off"
 
 <audio
 id="alarmSound"
+loop
+playsinline
 preload="auto"
 >
 
 <source
-src="alarm.mp3"
-type="audio/mpeg">
+src="https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
+type="audio/ogg">
 
 </audio>
 
@@ -329,7 +331,7 @@ databaseURL:
 projectId:"device-tracker-ar7",
 
 storageBucket:
-"device-tracker-ar7.firebasedatabase.app",
+"device-tracker-ar7.firebasestorage.app",
 
 messagingSenderId:"1027897374944",
 
@@ -360,6 +362,7 @@ const sound =
 document.getElementById("alarmSound");
 
 sound.volume = 1;
+sound.muted = false;
 
 let locallyLocked = false;
 
@@ -368,6 +371,69 @@ let antiTheftEnabled = false;
 let lastX = null;
 let lastY = null;
 let lastZ = null;
+
+async function playAlarm(){
+
+try{
+
+sound.pause();
+
+sound.currentTime = 0;
+
+sound.muted = false;
+
+sound.volume = 1;
+
+await sound.play();
+
+}catch(err){
+
+console.log("Sound error:",err);
+
+}
+
+}
+
+document.addEventListener(
+"touchmove",
+(e)=>{
+
+if(
+locallyLocked
+&&
+!document
+.getElementById("unlockBox")
+.contains(e.target)
+){
+
+e.preventDefault();
+
+}
+
+},
+{ passive:false }
+);
+
+document.addEventListener(
+"touchstart",
+(e)=>{
+
+if(
+locallyLocked
+&&
+!document
+.getElementById("unlockBox")
+.contains(e.target)
+){
+
+e.stopPropagation();
+e.preventDefault();
+
+}
+
+},
+true
+);
 
 document
 .getElementById("menuBtn")
@@ -381,27 +447,27 @@ document
 
 document
 .getElementById("enableSoundBtn")
-.onclick = ()=>{
+.onclick = async()=>{
 
-sound.play()
-.then(()=>{
+try{
+
+await playAlarm();
+
+setTimeout(()=>{
 
 sound.pause();
 
 sound.currentTime = 0;
 
-alert("Sound enabled");
+},700);
 
-})
-.catch(err=>{
+alert("Sound enabled successfully");
 
-console.log(err);
+}catch(err){
 
-alert(
-"Click button once again"
-);
+alert("Tap again");
 
-});
+}
 
 };
 
@@ -716,17 +782,7 @@ document
 
 document.body.classList.add("locked");
 
-try{
-
-sound.currentTime = 0;
-
-await sound.play();
-
-}catch(err){
-
-console.log(err);
-
-}
+await playAlarm();
 
 }
 
@@ -750,17 +806,7 @@ sound.currentTime = 0;
 
 if(data.alarm===true){
 
-try{
-
-sound.currentTime = 0;
-
-await sound.play();
-
-}catch(err){
-
-console.log(err);
-
-}
+await playAlarm();
 
 setTimeout(async()=>{
 
@@ -1055,11 +1101,7 @@ Math.abs(z-lastZ);
 
 if(diff > 15){
 
-try{
-
-sound.currentTime = 0;
-
-await sound.play();
+await playAlarm();
 
 new Notification(
 "⚠️ Theft Alert",
@@ -1068,12 +1110,6 @@ body:
 "Device movement detected"
 }
 );
-
-}catch(err){
-
-console.log(err);
-
-}
 
 }
 
